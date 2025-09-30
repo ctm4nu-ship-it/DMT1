@@ -13,29 +13,29 @@ logical *or*, or simply *Or*.
 namespace OrInference
 
 /- @@@
-## Example: ButtonA ∨ ButtonB
+## Example: Fire ∨ Flood
 
-Now imagine as ystem with two buttons and
-an alarm. Pressing **either** button should
-trigger the alarm.
+Now imagine as ystem with two emergency
+conditions and an alarm. **Either** condition
+should trigger the alarm.
 
 We can formalize this scenario by defining
-three propositions, say `ButtonA`, `ButtonB`,
-and `Alarm`, where their being true corresponds
-to the respective conditions being on/pushed.
+three propositions, we'll call `Fire`, `Flood`,
+and `Alarm` We'll stipulate that their being
+true corresponds to the respective conditions
+being present.
 @@@ -/
 
 /-- Propositions -/
-axiom ButtonA : Prop    -- true means A pressed
-axiom ButtonB : Prop    -- true means B pressed
+axiom Fire : Prop    -- true means A pressed
+axiom Flood : Prop    -- true means B pressed
 axiom Alarm   : Prop    -- true means alarm sounding
 
 /- @@@
 Now we can formally model the overall system
-behavior of "either button triggers the alarm"
-using the *Or* connective: `ButtonA ∨ ButtonB`.
-We'll see how to *build* a disjunction and how
-to *use* one to reason about the system.
+behavior as `(Fire ∨ Flood) → Alarm`. This is
+just  the form of proposition proven by the
+Or.introduction inference rule.
 @@@ -/
 
 
@@ -54,7 +54,7 @@ axiom Q : Prop
 #check P ∨ Q
 
 /- @@@
-## Inference Rules for `∨`
+## Inference Rules
 
 *Or* has **two introduction rules** (left and right)
 and **one elimination rule**. The introduction rules
@@ -67,22 +67,21 @@ how to *use* a disjunction.
 ````
     Γ ⊢ p : P
 --------------------- ∨-intro-left
-Γ ⊢ Or.inl p : P ∨ Q
+Γ ⊢ (Or.inl p) : P ∨ Q
 
     Γ ⊢ q : Q
 --------------------- ∨-intro-right
-Γ ⊢ Or.inr q : P ∨ Q
+Γ ⊢ (Or.inr q) : P ∨ Q
 ````
 
 
-### Or.elim (Elimination By Case Analysis)
+### Or.elim (By Cases)
 
 ````
 Γ ⊢ h : P ∨ Q   Γ ⊢ f : P → R   Γ ⊢ g : Q → R
 ---------------------------------------------- ∨-elim
-      Γ ⊢ Or.elim h f g : R
+      Γ ⊢ (Or.elim h f g) : R
 ````
-
 
 Intuitively: if from P you can get R, and from Q
 you can get R, then from P ∨ Q you can also get R.
@@ -133,12 +132,6 @@ the possible cases for a proof of P ∨ Q and show that
 in either case R follows.)
 @@@ -/
 
-theorem elim'
-  (P Q R : Prop)
-  (h : P ∨ Q)         -- given a proof of P ∨ Q
-  (f : P → R)         -- and a proof of P → R
-  (g : Q → R) : R :=       -- and a proof of Q → R
-    Or.elim h f g  -- conclude R by Iff.elim
 
 example (x : Nat) : x = 4 ∨ x = 2 → x % 2 = 0 :=
   fun (h : x = 4 ∨ x = 2) =>
@@ -160,22 +153,26 @@ true (by *h*), it must be that x%2=0.
 @@@ -/
 
 /- @@@
-## Theorems: A Few Properties of ∨
+## Theorems:
 
-From these rules we can derive useful properties:
-commutativity (P ∨ Q implies Q ∨ P), associativity,
-and identities with `False` and `True`. We'll prove
-a couple explicitly; Lean's library provides many
-others as `Or.comm`, `Or.assoc`, etc.
+From these rules we can derive useful properties.
+
+### ∧ is Commutative
 @@@ -/
 
--- Commutativity: from P ∨ Q derive Q ∨ P
+-- Commutativity: P ∨ Q ↔ Q ∨ P
 theorem comm {P Q : Prop} (h : P ∨ Q) : Q ∨ P :=
   Or.elim h
     (fun p => Or.inr p)
     (fun q => Or.inl q)
 
--- Left identity with False: False ∨ P implies P
+-- EXERCISE: Render this proof in natural language
+
+/- @@@
+### False is a Left Identity for ∨
+@@@ -/
+
+-- Left identity with False: (False ∨ P) →  P
 theorem false_or_left {P : Prop} (h : False ∨ P) : P :=
   Or.elim h
     (fun f => False.elim f)
@@ -189,13 +186,53 @@ and together these yield False ∨ P ↔ P (exercise).
 /- @@@
 ### Case-Analysis in the Example World
 
-Back to our buttons: from `ButtonA ∨ ButtonB` we can
+Back to our emergencies: from `Fire ∨ Flood` we can
 deduce `Alarm` by case analysis with the system laws.
 @@@ -/
 
-theorem either_button_triggers_alarm
-  (h : ButtonA ∨ ButtonB) (toAlarmA : ButtonA → Alarm) (toAlarmB : ButtonB → Alarm): Alarm :=
-  Or.elim h toAlarmA toAlarmB
+theorem either_emergency_triggers_alarm
+  (h : Fire ∨ Flood) (fireToAlarm : Fire → Alarm) (floodToAlarm : Flood → Alarm): Alarm :=
+  Or.elim h fireToAlarm floodToAlarm
+
+/- @@@
+Now there's another way to write this proof in Lean,
+and that's using pattern matching to destructure *h*
+into either *Or.inl (f : Fire)* or *Or.inr (f : Flood)*.
+@@@ -/
+
+example
+  (h : Fire ∨ Flood)
+  (fireToAlarm : Fire → Alarm)
+  (floodToAlarm : Flood → Alarm)
+: Alarm :=
+  match h with  -- h can only be one of the following
+  | Or.inl f => fireToAlarm f   -- f is proof of fire
+  | Or.inr f => floodToAlarm f  -- f is proof of flood
+
+/- @@@
+The first case in the match shows that from a proof
+of Fire ∨ Flood from a proof of fire we can derive a
+proof Alarm, by applying fireToAlarm to f. There is
+only one more possible way for First ∨ Flood to be
+true, and that's from a proof of flood. In this case
+applying floodToAlarm such a proof of flood would give
+a proof of alarm.
+
+In short, if First ∨ Flood is true *and in either case*
+Alarm is true, then Alarm is true. This is how one uses
+a proof of a disjunction. You have to show that a proof
+of the goal can be constructed *in either case*.
+@@@ -/
+
+/- @@@
+Finally we'll note that the match construct is notation
+for application of the elimination rule for h, which is
+to say, Or.elim. The two proof arguments are crucial in
+enabling a proof of Alarm to be constructed *in either
+case*, one from a proof of first, and one from a proof
+of Flood.
+@@@ -/
+
 
 /- @@@
 ### Exercises
@@ -220,6 +257,7 @@ theorem or_elim_to {P Q R : Prop}
 -- 3) Show False ∨ P ↔ P (hint: two implications).
 theorem false_or_iff {P : Prop} : False ∨ P ↔ P :=
   sorry
+-- Recall False elim: ∀ P : Prop, False → P (ending any proof)
 
 -- 4) Commutativity, again, but as an equivalence.
 theorem or_comm_iff {P Q : Prop} : P ∨ Q ↔ Q ∨ P :=
@@ -228,25 +266,5 @@ theorem or_comm_iff {P Q : Prop} : P ∨ Q ↔ Q ∨ P :=
 -- 4) Commutativity, again, but as an equivalence.
 theorem or_assoc_iff {P Q R : Prop} : P ∨ Q ∨ R ↔ (P ∨ Q) ∨ P :=
   sorry
-
-/- @@@
-## Summary: ∨ axioms and theorems
-
-Here's a summary of the axioms/rules for ∨, written
-assuming P, Q, and R are propositions.
-
-Axioms (inference rules):
-
-- Or.inl : P → P ∨ Q
-- Or.inr : Q → P ∨ Q
-- Or.elim : P ∨ Q → (P → R) → (Q → R) → R
-
-Some derived theorems (deductions from axioms):
-
-- comm : (P ∨ Q) → (Q ∨ P)
-- false_or_left : (False ∨ P) → P
-- either_button_triggers_alarm : (ButtonA ∨ ButtonB) → Alarm
-- (many more in Lean’s library: `Or.comm`, `Or.assoc`, etc.)
-@@@ -/
 
 end OrInference
